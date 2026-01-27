@@ -5,17 +5,25 @@
     <title>2025 KPF 통합 뉴스 모니터링 (전수 수집형)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --naver: #03cf5d; --google: #4285f4; --primary: #004085; }
-        body { font-family: 'Pretendard', sans-serif; padding: 20px; background: #f4f7fa; }
+        :root { --naver: #03cf5d; --google: #4285f4; --primary: #004085; --bg: #f4f7fa; }
+        body { font-family: 'Pretendard', sans-serif; padding: 20px; background: var(--bg); }
         .container { max-width: 1200px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom: 15px; margin-bottom: 20px; }
+        
+        /* 쿼리 설정 영역 */
+        .query-settings { background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e9ecef; }
+        .query-label { display: block; font-weight: bold; margin-bottom: 8px; color: var(--primary); }
+        .query-input-group { display: flex; gap: 10px; }
+        .query-input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; }
+        .query-hint { font-size: 12px; color: #666; margin-top: 8px; }
+
         .chart-container { height: 300px; margin-bottom: 30px; padding: 15px; border: 1px solid #eee; border-radius: 10px; }
         .month-tabs { display: flex; gap: 5px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
         .tab-btn { padding: 8px 15px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 5px; font-size: 13px; white-space: nowrap; }
         .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); font-weight: bold; }
-        /* 검색창 스타일 추가 */
+        
         .search-box { margin-bottom: 15px; }
-        .search-box input { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.3s; }
+        .search-box input { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 8px; font-size: 14px; outline: none; }
         .search-box input:focus { border-color: var(--primary); }
         
         .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; color: white; font-size: 11px; font-weight: bold; margin-right: 8px; }
@@ -25,15 +33,25 @@
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; border: 1px solid #eee; text-align: left; font-size: 13px; }
         th { background: #f8f9fa; position: sticky; top: 0; z-index: 10; }
-        .btn-run { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; }
+        .btn-run { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; transition: opacity 0.3s; }
+        .btn-run:disabled { opacity: 0.6; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h2 style="margin:0; color:var(--primary);">📰 2025 KPF 통합 보도 실적 (전수 수집)</h2>
+        <h2 style="margin:0; color:var(--primary);">📰 2025 통합 보도 실적 전수 수집</h2>
         <button id="csvBtn" style="background:#28a745; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;" disabled>📥 엑셀 저장</button>
+    </div>
+
+    <div class="query-settings">
+        <label class="query-label">🔍 수집 키워드 설정</label>
+        <div class="query-input-group">
+            <input type="text" id="queryInput" class="query-input" value="언론진흥재단 | 언론재단 | KPF" placeholder="검색어를 입력하세요 (예: 삼성전자 | 반도체)">
+            <button id="runBtn" class="btn-run" style="width: auto; padding: 0 40px;">수집 시작</button>
+        </div>
+        <p class="query-hint">※ 여러 단어 검색 시 <code>|</code> (버티컬 바)를 사용하세요. (예: 단어A | 단어B)</p>
     </div>
 
     <div class="chart-container">
@@ -45,7 +63,7 @@
     <div class="month-tabs" id="monthTabs"></div>
 
     <div class="search-box">
-        <input type="text" id="searchInput" placeholder=" 결과 내 검색 (제목 또는 언론사명을 입력하세요)" disabled>
+        <input type="text" id="searchInput" placeholder=" 결과 내 재검색 (제목 또는 언론사명)" disabled>
     </div>
 
     <div class="table-wrap">
@@ -60,13 +78,9 @@
                 </tr>
             </thead>
             <tbody id="newsBody">
-                <tr><td colspan="5" style="text-align:center; padding:50px; color:#999;">수집 버튼을 누르면 1월~12월 데이터를 모두 가져옵니다.</td></tr>
+                <tr><td colspan="5" style="text-align:center; padding:50px; color:#999;">상단의 수집 시작 버튼을 클릭하세요.</td></tr>
             </tbody>
         </table>
-    </div>
-
-    <div style="margin-top: 20px;">
-        <button id="runBtn" class="btn-run">🚀 2025년 데이터 전수 수집 및 분석 시작</button>
     </div>
 </div>
 
@@ -74,7 +88,6 @@
     const NAVER_ID = 'psW8xkUHR2KH4qPK9eBH'; 
     const NAVER_SECRET = '_8eXzLfqva';
     const PROXY = "https://corsproxy.io/?";
-    const QUERY = "언론진흥재단 | 언론재단 | KPF"; 
 
     let allNews = [];
     let currentMonth = 1;
@@ -93,15 +106,12 @@
         document.getElementById('monthTabs').appendChild(btn);
     }
 
-    // 검색창 입력 이벤트
-    document.getElementById('searchInput').onkeyup = function() {
-        renderTable();
-    };
+    document.getElementById('searchInput').onkeyup = () => renderTable();
 
-    async function fetchNaverFull() {
+    async function fetchNaverFull(targetQuery) {
         let results = [];
         for (let start = 1; start <= 1000; start += 100) {
-            const url = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(QUERY)}&display=100&sort=date&start=${start}`;
+            const url = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(targetQuery)}&display=100&sort=date&start=${start}`;
             try {
                 const res = await fetch(PROXY + encodeURIComponent(url), {
                     headers: { 'X-Naver-Client-Id': NAVER_ID, 'X-Naver-Client-Secret': NAVER_SECRET }
@@ -121,17 +131,16 @@
                     month: new Date(item.pubDate).getMonth() + 1
                 }));
                 results = results.concat(processed);
-                const lastDate = new Date(data.items[data.items.length - 1].pubDate);
-                if (lastDate.getFullYear() < 2025) break;
+                if (new Date(data.items[data.items.length - 1].pubDate).getFullYear() < 2025) break;
             } catch (e) { break; }
         }
         return results;
     }
 
-    async function fetchGoogleMonth(m) {
+    async function fetchGoogleMonth(m, targetQuery) {
         const start = `2025-${String(m).padStart(2, '0')}-01`;
         const end = `2025-${String(m).padStart(2, '0')}-${new Date(2025, m, 0).getDate()}`;
-        const q = `(${QUERY.replace(/ \| /g, ' OR ')}) after:${start} before:${end}`;
+        const q = `(${targetQuery.replace(/ \| /g, ' OR ')}) after:${start} before:${end}`;
         const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=ko&gl=KR&ceid=KR:ko`;
         try {
             const res = await fetch(PROXY + encodeURIComponent(url));
@@ -148,41 +157,45 @@
     }
 
     document.getElementById('runBtn').onclick = async () => {
+        const queryValue = document.getElementById('queryInput').value.trim();
+        if(!queryValue) return alert("검색어를 입력해주세요.");
+
         const btn = document.getElementById('runBtn');
         const status = document.getElementById('status');
         const searchInput = document.getElementById('searchInput');
+        const queryInput = document.getElementById('queryInput');
+        
         btn.disabled = true;
+        queryInput.disabled = true;
         allNews = [];
 
-        status.innerText = `⏳ 네이버 데이터 전수 분석 중...`;
-        const naverData = await fetchNaverFull();
+        status.innerText = `⏳ [${queryValue}] 키워드로 네이버 분석 중...`;
+        const naverData = await fetchNaverFull(queryValue);
         allNews = allNews.concat(naverData);
         updateChart(); renderTable();
 
         for(let m=1; m<=12; m++) {
-            status.innerText = `⏳ 구글 뉴스 ${m}월 분석 중...`;
-            const gData = await fetchGoogleMonth(m);
+            status.innerText = `⏳ [${queryValue}] 키워드로 구글 ${m}월 분석 중...`;
+            const gData = await fetchGoogleMonth(m, queryValue);
             allNews = allNews.concat(gData);
             allNews = Array.from(new Map(allNews.map(n => [n.title, n])).values());
             updateChart();
             renderTable();
         }
 
-        status.innerText = `✅ 수집 완료: 총 ${allNews.length}건 (네이버 ${allNews.filter(n=>n.src==='Naver').length}건 / 구글 ${allNews.filter(n=>n.src==='Google').length}건)`;
+        status.innerText = `✅ 완료: [${queryValue}] 총 ${allNews.length}건 수집됨`;
         document.getElementById('csvBtn').disabled = false;
-        searchInput.disabled = false; // 수집 완료 후 검색창 활성화
-        btn.style.display = 'none';
+        searchInput.disabled = false;
+        btn.innerText = "🔄 다시 수집하기";
+        btn.disabled = false;
+        queryInput.disabled = false;
     };
 
     function renderTable() {
         const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-        
-        // 월별 필터링 + 검색어 필터링 통합
         const filtered = allNews.filter(n => {
-            const isMonth = n.month === currentMonth;
-            const matchesSearch = n.title.toLowerCase().includes(searchTerm) || 
-                                  n.press.toLowerCase().includes(searchTerm);
-            return isMonth && matchesSearch;
+            return n.month === currentMonth && 
+                   (n.title.toLowerCase().includes(searchTerm) || n.press.toLowerCase().includes(searchTerm));
         }).sort((a,b) => b.date.localeCompare(a.date));
 
         const tbody = document.getElementById('newsBody');
@@ -209,15 +222,16 @@
             data: {
                 labels: labels,
                 datasets: [
-                    { label: '네이버 (Naver)', data: nCounts, borderColor: '#03cf5d', backgroundColor: '#03cf5d22', fill: true, tension: 0.3 },
-                    { label: '구글 (Google)', data: gCounts, borderColor: '#4285f4', backgroundColor: '#4285f422', fill: true, tension: 0.3 }
+                    { label: '네이버', data: nCounts, borderColor: '#03cf5d', backgroundColor: '#03cf5d22', fill: true, tension: 0.3 },
+                    { label: '구글', data: gCounts, borderColor: '#4285f4', backgroundColor: '#4285f422', fill: true, tension: 0.3 }
                 ]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
         });
     }
 
     document.getElementById('csvBtn').onclick = () => {
+        const queryValue = document.getElementById('queryInput').value.trim();
         let csv = "\uFEFF출처,날짜,언론사,제목,링크\n";
         allNews.forEach(n => {
             csv += `${n.src},${n.date},"${n.press}","${n.title.replace(/"/g,'""')}","${n.link}"\n`;
@@ -225,9 +239,8 @@
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `2025_통합보도실적_KPF_전수조사.csv`; a.click();
+        a.download = `2025_보도실적_${queryValue}.csv`; a.click();
     };
 </script>
 </body>
-
 </html>
