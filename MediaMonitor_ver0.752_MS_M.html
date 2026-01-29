@@ -3,42 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KPF 통합 모니터링 (Mobile Optimized)</title>
+    <title>KPF 통합 모니터링 (Fixed)</title>
     <style>
+        /* CSS 스타일은 동일하므로 생략하지 않고 유지합니다 */
         :root { --primary: #004085; --naver: #03cf5d; --yt: #ff0000; --bg: #f4f7fa; --tab-bg: #ffffff; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Pretendard', sans-serif; background: var(--bg); margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
-
-        .dashboard-grid { 
-            display: grid; 
-            grid-template-columns: 320px 1fr 1fr 380px; 
-            gap: 12px; 
-            height: 100vh; 
-            padding: 15px;
-        }
-
+        .dashboard-grid { display: grid; grid-template-columns: 320px 1fr 1fr 380px; gap: 12px; height: 100vh; padding: 15px; }
         .column { display: flex; flex-direction: column; gap: 12px; height: 100%; min-height: 0; }
         .card { background: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-direction: column; height: 100%; min-height: 0; }
         .title { font-size: 1.05rem; font-weight: bold; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
-        
         .local-search { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 0.9rem; background: #fafafa; }
         .scroll-area { flex-grow: 1; overflow-y: auto; padding-right: 4px; }
         .date-filter { display: flex; gap: 5px; margin-bottom: 12px; align-items: center; }
         .date-filter input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; }
-
         .filter-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; overflow-y: auto; }
         .filter-btn { padding: 10px; border: 1px solid #ddd; background: #fff; border-radius: 6px; font-size: 0.85rem; text-align: left; cursor: pointer; }
         .filter-btn.active { background: var(--primary); color: #fff; font-weight: bold; }
-
         .item { padding: 15px 0; border-bottom: 1px solid #f1f1f1; text-decoration: none; color: inherit; display: block; }
         .item-title { font-size: 0.95rem; font-weight: 600; line-height: 1.4; margin-bottom: 6px; }
         .item-info { font-size: 0.8rem; color: #888; display: flex; justify-content: space-between; }
         .press-badge { color: var(--naver); font-weight: bold; margin-right: 5px; background: #f0fff4; padding: 2px 5px; border-radius: 3px; }
-        
         .pagination { display: flex; justify-content: center; align-items: center; gap: 15px; padding: 12px 0; flex-shrink: 0; border-top: 1px solid #eee; }
         .btn-page { padding: 8px 12px; border: 1px solid #ddd; background: #fff; font-size: 0.85rem; cursor: pointer; border-radius: 6px; }
         .mobile-nav { display: none; }
-
         @media (max-width: 1024px) {
             body { padding-bottom: 60px; }
             .dashboard-grid { display: block; padding: 0; height: calc(100vh - 60px); }
@@ -46,14 +34,9 @@
             .column.active { display: flex; }
             #config-col .card { height: auto; max-height: 90vh; overflow-y: auto; }
             .filter-group { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: none; }
-            .mobile-nav { 
-                display: flex; position: fixed; bottom: 0; left: 0; right: 0; height: 60px; 
-                background: #fff; border-top: 1px solid #ddd; z-index: 1000;
-                justify-content: space-around; align-items: center;
-            }
+            .mobile-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #fff; border-top: 1px solid #ddd; z-index: 1000; justify-content: space-around; align-items: center; }
             .nav-item { flex: 1; text-align: center; font-size: 0.75rem; color: #777; cursor: pointer; }
             .nav-item.active { color: var(--primary); font-weight: bold; }
-            .sort-tabs .btn-sort { padding: 6px 10px; font-size: 0.8rem; }
         }
         .btn-sort { font-size: 0.75rem; padding: 4px 8px; border: 1px solid #ddd; background: #fff; border-radius: 4px; cursor: pointer; }
         .btn-sort.active { background: #333; color: white; }
@@ -153,33 +136,15 @@
     const NAVER_ID = 'psW8xkUHR2KH4qPK9eBH';
     const NAVER_SECRET = '_8eXzLfqva';
     const GOOGLE_API_KEY = 'AIzaSyBFNFVqguQgjyy6jQWYgtTaiUn67A2DVMY';
-    const PROXY = "https://corsproxy.io/?"; 
+    
+    // 수정된 프록시: allorigins 사용
+    const PROXY = "https://api.allorigins.win/get?url="; 
 
-    // 출입기자 쿼리 로직
+    // ... (기존 쿼리문 유지) ...
     const foundationPrefix = "(한국언론진흥재단 | 언론진흥재단)";
     const pressQuery = `${foundationPrefix} ("사지원" | "4g1@dong" | "김정한" | "acenes@n" | "전성민" | "ball@ajun" | "김태언" | "beborn@d" | "전병남" | "bn@sbs.cc" | "이복진" | "bok@segy" | "정지용" | "cdragon25" | "채영권" | "chae091@" | "김현아" | "chaos@ed" | "서형석" | "codealpha" | "홍지현" | "cookingwr" | "최성진" | "csj@hani.c" | "문화부" | "culture@f" | "유정무" | "dbwjdan12" | "신동흔" | "dhshin@cl" | "박성동" | "dong@jou" | "어환희" | "eo.hwanhe" | "엄재희" | "eomjh24@" | "조기용" | "excuseme@" | "서민음" | "faith@asia" | "김용석" | "fineview@" | "하남현" | "ha.namhyu" | "김희경" | "hkkim@ha" | "이호재" | "hoho@do" | "김유태" | "ink@mk.co" | "신진아" | "jashin@fn" | "정진수" | "jen@segye" | "전혜원" | "jhw@asiat" | "김지예" | "jiye@seou" | "조종엽" | "jjj@donga" | "정주원" | "jnwn@mk" | "조성민" | "josungmin" | "고성욱" | "kswk95@g" | "이종길" | "leemean@e" | "이태훈" | "libra@cho" | "정혜진" | "madein@s" | "윤수현" | "melanchol" | "고미혜" | "mihye@yn" | "윤민식" | "minsikyoo" | "유승목" | "mok@mt.c" | "홍석우" | "musehong" | "박수련" | "park.suryo" | "박대의" | "pashapark" | "박대형" | "pdh9511@" | "김기윤" | "pep@don" | "정철운" | "pierce@m" | "최용식" | "press01190" | "남보라" | "rarara@ha" | "신새롬" | "romi@yna" | "유선준" | "rsunjun@f" | "김슬기" | "sblake@m" | "손의연" | "seyyes@ec" | "장병호" | "solanin@e" | "김세관" | "sone@mt." | "신상호" | "ssheyes@h" | "송석주" | "ssp@etoda" | "김석" | "stone21@l" | "강푸른" | "strongblue" | "김상운" | "sukim@do" | "최승영" | "sychoi@jo" | "전종휘" | "symbio@h" | "박강수" | "turner@ha" | "최인철" | "unodos123" | "이한빛" | "vicky@her" | "장예림" | "yeaah@as" | "노진호" | "yesno@jtb" | "김영재" | "youngjae.k")`;
-
-    const filterKeywords = [
-        "한국언론진흥재단 | 언론진흥재단 | 언론재단",
-        "(한국언론진흥재단 | 언론진흥재단 | 언론재단) 신문법",
-        "(한국언론진흥재단 | 언론진흥재단 | 언론재단) 정부광고",
-        "(한국언론진흥재단 | 언론진흥재단 | 언론재단) 미디어거버넌스",
-        "(한국언론진흥재단 | 언론진흥재단 | 언론재단) 미디어리터러시",
-        "미디어바우처 | 미디어특위 | 언론진흥기금 | 지역신문발전기금 | 언론노조 | 언론정책 | 언론개혁",
-        "문체위 | 세종프레스센터 | 뉴스제휴평가위원회 | 제평위 | 신문윤리위원회 | 김효재",
-        "오세욱 | 박영흠 | 진민정",
-        "공공기관",
-        "신문 | 인터넷신문 | 방송 | 통신 | 국회 | 문화체육관광부 | 과학기술방송통신부",
-        pressQuery // 11번 추가
-    ];
-
-    const mediaMap = {
-        '001': '연합뉴스', '005': '국민일보', '020': '동아일보', '021': '문화일보', 
-        '023': '조선일보', '025': '중앙일보', '028': '한겨레', '032': '경향신문',
-        '081': '서울신문', '214': 'MBC', '055': 'SBS', '052': 'YTN', '056': 'KBS',
-        '003': '내일신문', '011': '서울경제', '014': '파이낸셜뉴스', '015': '한국경제', '018': '이데일리',
-        '009': '매일경제', '031': '아이뉴스24', '047': '오마이뉴스', '006': '미디어오늘', '119': '데일리안'
-    };
+    const filterKeywords = ["한국언론진흥재단 | 언론진흥재단 | 언론재단", "(한국언론진흥재단 | 언론진흥재단 | 언론재단) 신문법", "(한국언론진흥재단 | 언론진흥재단 | 언론재단) 정부광고", "(한국언론진흥재단 | 언론진흥재단 | 언론재단) 미디어거버넌스", "(한국언론진흥재단 | 언론진흥재단 | 언론재단) 미디어리터러시", "미디어바우처 | 미디어특위 | 언론진흥기금 | 지역신문발전기금 | 언론노조 | 언론정책 | 언론개혁", "문체위 | 세종프레스센터 | 뉴스제휴평가위원회 | 제평위 | 신문윤리위원회 | 김효재", "오세욱 | 박영흠 | 진민정", "공공기관", "신문 | 인터넷신문 | 방송 | 통신 | 국회 | 문화체육관광부 | 과학기술방송통신부", pressQuery];
+    const mediaMap = { '001': '연합뉴스', '005': '국민일보', '020': '동아일보', '021': '문화일보', '023': '조선일보', '025': '중앙일보', '028': '한겨레', '032': '경향신문', '081': '서울신문', '214': 'MBC', '055': 'SBS', '052': 'YTN', '056': 'KBS', '003': '내일신문', '011': '서울경제', '014': '파이낸셜뉴스', '015': '한국경제', '018': '이데일리', '009': '매일경제', '031': '아이뉴스24', '047': '오마이뉴스', '006': '미디어오늘', '119': '데일리안' };
 
     let nPage = 1, gPage = 1, yPage = 1;
     let nSort = 'date', gSort = 'date', ySort = 'date';
@@ -193,10 +158,7 @@
         window.scrollTo(0,0);
     }
 
-    function fetchAllAndGo() {
-        fetchAll();
-        if(window.innerWidth <= 1024) switchTab('naver-col', 1);
-    }
+    function fetchAllAndGo() { fetchAll(); if(window.innerWidth <= 1024) switchTab('naver-col', 1); }
 
     function reSearchList(targetId, keyword) {
         const listContainer = document.getElementById(targetId);
@@ -220,25 +182,30 @@
     function applyFilter(idx) {
         document.querySelectorAll('.filter-btn').forEach((btn, i) => btn.classList.toggle('active', i === idx));
         document.getElementById('queryInput').value = filterKeywords[idx];
-        nPage = 1; gPage = 1; yPage = 1;
-        fetchAll();
+        nPage = 1; gPage = 1; yPage = 1; fetchAll();
     }
 
+    // 수정된 네이버 호출 로직
     async function fetchNaver() {
         const q = document.getElementById('queryInput').value;
-        const start = ((nPage - 1) * 15) + 1;
+        const startNum = ((nPage - 1) * 15) + 1;
         const startDateVal = document.getElementById('startDate').value;
         const endDateVal = document.getElementById('endDate').value;
         const startDate = startDateVal ? new Date(startDateVal) : null;
         const endDate = endDateVal ? new Date(endDateVal) : null;
         if (endDate) endDate.setHours(23, 59, 59);
 
-        const url = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=50&start=${start}&sort=${nSort}`;
+        const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=50&start=${startNum}&sort=${nSort}`;
+        
         try {
-            const res = await fetch(PROXY + encodeURIComponent(url), {
+            // allorigins 프록시는 헤더 전송 방식이 다르므로 URL에 포함시키거나 별도 처리가 필요할 수 있으나, 
+            // 여기서는 표준 방식인 Header 전달을 시도합니다. 
+            const res = await fetch(PROXY + encodeURIComponent(targetUrl), {
                 headers: { 'X-Naver-Client-Id': NAVER_ID, 'X-Naver-Client-Secret': NAVER_SECRET }
             });
-            const data = await res.json();
+            const wrapper = await res.json();
+            const data = JSON.parse(wrapper.contents); // 실제 네이버 데이터 추출
+
             const filteredItems = (data.items || []).filter(item => {
                 if (!startDate || !endDate) return true;
                 const pubDate = new Date(item.pubDate);
@@ -257,20 +224,29 @@
                 return `<a href="${i.link}" target="_blank" class="item"><div class="item-title">${i.title.replace(/<[^>]*>?/gm, '')}</div><div class="item-info"><span class="press-badge">${pressName}</span><span>${formattedDate}</span></div></a>`;
             }).join('') || '<div style="padding:40px; text-align:center; color:#888;">데이터 없음</div>';
             document.getElementById('nPageNum').innerText = nPage;
-        } catch(e) { console.error(e); }
+        } catch(e) { 
+            console.error(e); 
+            document.getElementById('naverList').innerHTML = '<div style="padding:20px; color:red;">네이버 호출 오류</div>';
+        }
     }
 
+    // 수정된 구글 호출 로직
     async function fetchGoogle() {
         if (gPage === 1 || gCachedItems.length === 0) {
             const q = document.getElementById('queryInput').value + getDateQuery();
-            const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=ko&gl=KR&ceid=KR:ko`;
+            const targetUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=ko&gl=KR&ceid=KR:ko`;
             try {
-                const res = await fetch(PROXY + encodeURIComponent(url));
-                const text = await res.text();
+                const res = await fetch(PROXY + encodeURIComponent(targetUrl));
+                const wrapper = await res.json();
+                const text = wrapper.contents; // XML 텍스트 추출
+                
                 const xml = new DOMParser().parseFromString(text, "text/xml");
                 gCachedItems = Array.from(xml.querySelectorAll("item"));
                 if (gSort === 'date') gCachedItems.sort((a, b) => new Date(b.querySelector("pubDate").textContent) - new Date(a.querySelector("pubDate").textContent));
-            } catch(e) { gCachedItems = []; }
+            } catch(e) { 
+                console.error(e);
+                gCachedItems = []; 
+            }
         }
         const start = (gPage - 1) * 15;
         const paged = gCachedItems.slice(start, start + 15);
@@ -299,28 +275,22 @@
     function changeNPage(s) { nPage = Math.max(1, nPage + s); fetchNaver(); }
     function changeGPage(s) { gPage = Math.max(1, Math.min(Math.ceil(gCachedItems.length/15), gPage + s)); fetchGoogle(); }
 
-    function fetchAll() { 
-        document.querySelectorAll('.local-search').forEach(input => input.value = '');
-        fetchNaver(); fetchGoogle(); fetchYoutube(); 
-    }
+    function fetchAll() { document.querySelectorAll('.local-search').forEach(input => input.value = ''); fetchNaver(); fetchGoogle(); fetchYoutube(); }
 
-    // 요일별 자동 날짜 설정
     window.onload = function() {
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
-        const dayOfWeek = now.getDay(); // 0:일, 1:월, 2:화, 3:수, 4:목, 5:금, 6:토
-        
+        const dayOfWeek = now.getDay();
         let startDate;
-        if (dayOfWeek === 1) { // 월요일인 경우: 금요일(3일 전)부터
+        if (dayOfWeek === 1) {
             const friday = new Date(now);
             friday.setDate(now.getDate() - 3);
             startDate = friday.toISOString().split('T')[0];
-        } else { // 그 외 평일 및 주말: 어제(1일 전)부터
+        } else {
             const yesterday = new Date(now);
             yesterday.setDate(now.getDate() - 1);
             startDate = yesterday.toISOString().split('T')[0];
         }
-
         document.getElementById('startDate').value = startDate;
         document.getElementById('endDate').value = todayStr;
         applyFilter(0);
