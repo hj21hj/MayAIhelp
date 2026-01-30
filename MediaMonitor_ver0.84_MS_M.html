@@ -142,8 +142,7 @@
     const NAVER_ID = 'psW8xkUHR2KH4qPK9eBH';
     const NAVER_SECRET = '_8eXzLfqva';
     const GOOGLE_API_KEY = 'AIzaSyBFNFVqguQgjyy6jQWYgtTaiUn67A2DVMY';
-    const ASSEMBLY_KEY = 'f5f19d8da12d4a9bbf83a305a9bd680d';
-    // 모바일 안정성을 위해 프록시 주소 최적화
+    const ASSEMBLY_KEY = 'f5f19d8da12d4a9bbf83a305a9bd680d'; // 사용자 제공 API 키
     const PROXY = "https://corsproxy.io/?"; 
 
     const foundationPrefix = "(한국언론진흥재단 | 언론진흥재단)";
@@ -159,7 +158,7 @@
         "문체위 | 세종프레스센터 | 뉴스제휴평가위원회 | 제평위 | 신문윤리위원회 | 김효재",
         "오세욱 | 박영흠 | 진민정",
         "공공기관",
-        "문화체육관광부 | 문체부 | 국회 | 문화체육관광위원회 | 문체위",
+        "신문 | 인터넷신문 | 방송 | 통신 | 국회 | 문화체육관광부 | 과학기술방송통신부",
         pressQuery,
         "PRE_RELEASE"
     ];
@@ -192,10 +191,9 @@
         fetchAll();
     }
 
-    // 🟢 문체부 RSS 모바일 대응 수정
+    // 🟢 문체부 RSS 연동
     async function fetchMcstRSS() {
         const rssUrl = "https://www.mcst.go.kr/common/rss/rssGenXml.jsp?pMenuCD=0302000000";
-        // 모바일 보안 정책 대응을 위한 타임아웃 및 옵션 추가
         try {
             const res = await fetch(PROXY + encodeURIComponent(rssUrl));
             const text = await res.text();
@@ -204,9 +202,7 @@
 
             document.getElementById('naverList').innerHTML = items.map(item => {
                 const title = item.querySelector("title").textContent.trim();
-                let link = item.querySelector("link").textContent.trim();
-                // HTTP 링크를 HTTPS로 전환하여 모바일 브라우저 차단 방지
-                link = link.replace("http://", "https://");
+                const link = item.querySelector("link").textContent.trim();
                 const rawDate = item.querySelector("pubDate").textContent.trim();
                 const category = item.querySelector("category")?.textContent || "보도자료";
                 let dateDisplay = rawDate.length >= 8 ? `${rawDate.substring(0,4)}-${rawDate.substring(4,6)}-${rawDate.substring(6,8)}` : rawDate;
@@ -215,27 +211,35 @@
                             <div class="item-title">${title}</div>
                             <div class="item-info"><span class="press-badge">${category}</span><span>${dateDisplay}</span></div>
                         </a>`;
-            }).join('') || '<div class="item">조회된 보도자료가 없습니다.</div>';
+            }).join('') || '<div class="item">데이터가 없습니다.</div>';
         } catch(e) {
-            document.getElementById('naverList').innerHTML = '<div class="item" style="color:#666;">데이터를 불러오는 중입니다. 잠시만 기다려주세요... (새로고침 권장)</div>';
+            document.getElementById('naverList').innerHTML = '<div class="item">문체부 로드 실패</div>';
         }
     }
 
-    // 🔵 국회 보도자료 API
+    // 🔵 국회 보도자료 API 연동 (이미지 및 명세서 기준)
     async function fetchAssemblyAPI() {
+        // 명세서 기반 엔드포인트: ninnagrlaelvtzfnt
         const url = `https://open.assembly.go.kr/portal/openapi/ninnagrlaelvtzfnt?KEY=${ASSEMBLY_KEY}&Type=json&pIndex=1&pSize=20`;
         try {
             const res = await fetch(url);
             const data = await res.json();
+            // JSON 구조: ninnagrlaelvtzfnt[1].row
             const rows = data.ninnagrlaelvtzfnt[1].row;
+
             document.getElementById('googleList').innerHTML = rows.map(row => {
+                // 국회 보도자료 게시판 상세 페이지 베이스 URL (검색 및 확인용)
                 const detailLink = `https://www.assembly.go.kr/portal/bbs/B0000059/view.do?nttId=${row.NUM}&menuNo=600103`;
                 return `<a href="${detailLink}" target="_blank" class="item">
                             <div class="item-title">${row.TITLE}</div>
-                            <div class="item-info"><span style="color:var(--primary); font-weight:bold;">${row.BBS_TITLE || '국회보도'}</span><span>${row.WRITE_DATE}</span></div>
+                            <div class="item-info">
+                                <span style="color:var(--primary); font-weight:bold;">${row.BBS_TITLE || '국회보도'}</span>
+                                <span>${row.WRITE_DATE}</span>
+                            </div>
                         </a>`;
-            }).join('') || '<div class="item">조회된 보도자료가 없습니다.</div>';
+            }).join('') || '<div class="item">게시글이 없습니다.</div>';
         } catch(e) {
+            console.error("Assembly API Error:", e);
             document.getElementById('googleList').innerHTML = '<div class="item">국회 API 로드 실패</div>';
         }
     }
@@ -278,12 +282,8 @@
         document.getElementById('gPageNum').innerText = gPage;
     }
 
-    // 🎬 유튜브 검색 (요청 키워드 고정)
     async function fetchYoutube() {
-        let q = document.getElementById('queryInput').value;
-        if (!q || currentFilterIdx === 9) {
-            q = "문화체육관광부 | 문체부 | 국회 | 문화체육관광위원회 | 문체위";
-        }
+        const q = document.getElementById('queryInput').value || "한국언론진흥재단";
         const order = (ySort === 'date') ? 'date' : 'relevance';
         const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&maxResults=15&order=${order}&type=video&key=${GOOGLE_API_KEY}`;
         try {
