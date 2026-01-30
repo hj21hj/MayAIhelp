@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KPF 통합 모니터링 v0.85 (GAS 통합형)</title>
+    <title>KPF 통합 모니터링 v0.85 (GAS 통합)</title>
     <style>
         :root { --primary: #004085; --naver: #03cf5d; --yt: #ff0000; --bg: #f4f7fa; --tab-bg: #ffffff; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -150,11 +150,11 @@
 
 <script>
     // ---------------------------------------------------------
-    // GAS 프록시 주소 (모든 요청을 이 주소로 보냅니다)
+    // 사용자가 만든 GAS 프록시 주소 (반드시 본인의 주소인지 재확인)
     const GAS_URL = "https://script.google.com/macros/s/AKfycbx674hDBg15__FCk1XB2HqOuxWMNB6Y2qn7b7WATT3QMCBNb4vPQzml7uZY8MJtbalU3A/exec";
     
-    // 유튜브 API 키 (유튜브 검색을 위해 별도로 사용)
-    const GOOGLE_API_KEY = 'YOUR_ACTUAL_YOUTUBE_API_KEY_HERE'; 
+    // 유튜브 API 키 (유튜브 검색 시 필요)
+    const GOOGLE_API_KEY = '실제_유튜브_API_키를_입력하세요'; 
     // ---------------------------------------------------------
 
     const foundationPrefix = "(한국언론진흥재단 | 언론진흥재단)";
@@ -198,7 +198,7 @@
         });
     }
 
-    // 🟢 네이버 뉴스 (GAS Proxy)
+    // 🟢 네이버 호출 (GAS 사용)
     async function fetchNaver() {
         const q = document.getElementById('queryInput').value;
         const start = ((nPage - 1) * 15) + 1;
@@ -225,27 +225,35 @@
                     if(m) press = mediaMap[m[1]] || `매체(${m[1]})`;
                 }
                 return `<a href="${i.link}" target="_blank" class="item"><div class="item-title">${i.title.replace(/<[^>]*>?/gm, '')}</div><div class="item-info"><span class="press-badge">${press}</span><span>${new Date(i.pubDate).toLocaleDateString()}</span></div></a>`;
-            }).join('') || '<div style="padding:40px; text-align:center;">조건 내 데이터 없음</div>';
+            }).join('') || '<div style="padding:40px; text-align:center;">데이터 없음</div>';
             document.getElementById('nPageNum').innerText = nPage;
         } catch(e) { 
-            document.getElementById('naverList').innerHTML = '연결 오류: GAS 설정을 확인하세요.'; 
+            document.getElementById('naverList').innerHTML = '네이버 데이터 호출 실패'; 
         }
     }
 
-    // 🔵 구글 뉴스 (GAS Proxy - AllOrigins 대체)
+    // 🔵 구글 호출 (AllOrigins 대신 GAS 프록시 사용하도록 전면 수정)
     async function fetchGoogle() {
         if (gPage === 1 || gCachedItems.length === 0) {
             const q = document.getElementById('queryInput').value + (document.getElementById('startDate').value ? ` after:${document.getElementById('startDate').value}` : "");
             const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=ko&gl=KR&ceid=KR:ko`;
             
             try {
-                // AllOrigins 대신 GAS를 통해 구글 RSS 요청
+                // GAS_URL을 통해 구글 RSS 요청
                 const res = await fetch(`${GAS_URL}?url=${encodeURIComponent(rssUrl)}`);
-                const text = await res.text(); // GAS에서 넘어온 XML 텍스트
-                const xml = new DOMParser().parseFromString(text, "text/xml");
+                const text = await res.text();
+                
+                // GAS 응답이 JSON 형식이거나 에러 텍스트일 수 있으므로 XML 파싱 전 체크
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(text, "text/xml");
+                
+                // 파싱 에러 여부 확인
+                if (xml.getElementsByTagName("parsererror").length > 0) {
+                    throw new Error("XML 파싱 실패");
+                }
+
                 gCachedItems = Array.from(xml.querySelectorAll("item"));
                 
-                // 최신순 정렬 (RSS 기본은 관련도순일 수 있음)
                 if (gSort === 'date') {
                     gCachedItems.sort((a,b) => new Date(b.querySelector("pubDate").textContent) - new Date(a.querySelector("pubDate").textContent));
                 }
@@ -259,39 +267,38 @@
         document.getElementById('googleList').innerHTML = paged.map(n => {
             const title = n.querySelector("title")?.textContent || "제목 없음";
             const link = n.querySelector("link")?.textContent || "#";
-            const source = n.querySelector("source")?.textContent || "Google";
+            const source = n.querySelector("source")?.textContent || "Google News";
             const pubDate = n.querySelector("pubDate")?.textContent || "";
-            return `<a href="${link}" target="_blank" class="item"><div class="item-title">${title}</div><div class="item-info"><span style="color:var(--primary); font-weight:bold;">${source}</span><span>${pubDate ? new Date(pubDate).toLocaleDateString() : ''}</span></div></a>`;
+            return `<a href="${link}" target="_blank" class="item">
+                <div class="item-title">${title}</div>
+                <div class="item-info">
+                    <span style="color:var(--primary); font-weight:bold;">${source}</span>
+                    <span>${pubDate ? new Date(pubDate).toLocaleDateString() : ''}</span>
+                </div>
+            </a>`;
         }).join('') || '<div style="padding:40px; text-align:center;">결과 없음</div>';
         document.getElementById('gPageNum').innerText = gPage;
     }
 
-    // 🎬 유튜브 검색
+    // 🎬 유튜브 호출
     async function fetchYoutube() {
         const q = document.getElementById('queryInput').value;
         const order = (ySort === 'date') ? 'date' : 'relevance';
-        // 유튜브는 직접 호출 (또는 필요시 GAS 경유 가능하나 보통 직접 호출 사용)
         const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&maxResults=15&order=${order}&type=video&key=${GOOGLE_API_KEY}`;
         try {
             const res = await fetch(url);
             const data = await res.json();
-            if (data.error) throw new Error(data.error.message);
-            
-            document.getElementById('ytList').innerHTML = (data.items || []).map(v => `
-                <a href="https://www.youtube.com/watch?v=${v.id.videoId}" target="_blank" class="item">
-                    <div class="yt-thumb" style="background-image:url('${v.snippet.thumbnails.medium.url}')"></div>
-                    <div class="item-title" style="font-size:0.9rem;">${v.snippet.title}</div>
-                    <div class="item-info"><span>${v.snippet.channelTitle}</span></div>
-                </a>`).join('') || '결과 없음';
+            if(data.error) throw new Error();
+            document.getElementById('ytList').innerHTML = (data.items || []).map(v => `<a href="https://www.youtube.com/watch?v=${v.id.videoId}" target="_blank" class="item"><div class="yt-thumb" style="background-image:url('${v.snippet.thumbnails.medium.url}')"></div><div class="item-title" style="font-size:0.9rem;">${v.snippet.title}</div><div class="item-info"><span>${v.snippet.channelTitle}</span></div></a>`).join('') || '결과 없음';
         } catch(e) { 
-            document.getElementById('ytList').innerHTML = `<div style="padding:20px; color:red;">유튜브 API 오류: ${e.message}</div>`; 
+            document.getElementById('ytList').innerHTML = '<div style="padding:20px; text-align:center;">유튜브 API 키를 확인하세요.</div>'; 
         }
     }
 
     function applyFilter(idx) {
         document.querySelectorAll('.filter-btn').forEach((btn, i) => btn.classList.toggle('active', i === idx));
         document.getElementById('queryInput').value = filterKeywords[idx];
-        nPage = 1; gPage = 1; gCachedItems = []; 
+        nPage = 1; gPage = 1; gCachedItems = [];
         fetchAll();
     }
 
@@ -299,7 +306,7 @@
         document.getElementById(prefix + 'SortDate').classList.toggle('active', selected === 'date');
         document.getElementById(prefix + 'SortSim').classList.toggle('active', (selected === 'sim' || selected === 'relevance'));
     }
-    
+
     function setNaverSort(s) { nSort = s; nPage = 1; updateSortUI('n', s); fetchNaver(); }
     function setGoogleSort(s) { gSort = s; gPage = 1; gCachedItems = []; updateSortUI('g', s); fetchGoogle(); }
     function setYoutubeSort(s) { ySort = s; updateSortUI('y', s); fetchYoutube(); }
@@ -322,8 +329,6 @@
         const todayStr = now.toISOString().split('T')[0];
         const dayOfWeek = now.getDay();
         let startDate;
-        
-        // 월요일이면 금요일부터, 아니면 어제부터
         if (dayOfWeek === 1) { 
             const friday = new Date(now); friday.setDate(now.getDate() - 3);
             startDate = friday.toISOString().split('T')[0];
