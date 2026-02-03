@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>지출 내역 분류 시스템 v0.7</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h2 { font-size: 22px; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 15px; text-align: center; }
+        .guide-box { background: #fdf6e3; border: 1px solid #eee8d5; padding: 15px; border-radius: 6px; margin-bottom: 25px; text-align: center; line-height: 1.6; font-size: 14px; }
+        #drop-zone { border: 2px dashed #cbd5e0; background: #f8fafc; padding: 40px; text-align: center; cursor: pointer; color: #64748b; border-radius: 8px; margin-bottom: 20px; }
+        .tabs-wrapper { border-bottom: 1px solid #dee2e6; margin-bottom: 20px; overflow-x: auto; white-space: nowrap; }
+        .tab-button { padding: 10px 20px; cursor: pointer; border: 1px solid #dee2e6; background: #f8f9fa; border-radius: 8px 8px 0 0; font-size: 13px; font-weight: bold; margin-right: 4px; border-bottom: none; }
+        .tab-button.active { background: #fff; color: #2d3748; border-top: 3px solid #4a5568; position: relative; top: 1px; }
+        .result-section { display: none; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .group-title { font-size: 14px; font-weight: bold; margin: 25px 0 10px 0; padding: 5px 10px; border-radius: 4px; }
+        .taxi-title { background: #fff5f5; color: #c53030; border-left: 4px solid #c53030; }
+        .train-title { background: #fffaf0; color: #dd6b20; border-left: 4px solid #dd6b20; }
+        .post-title { background: #f0fff4; color: #2f855a; border-left: 4px solid #2f855a; }
+        .item-title { background: #faf5ff; color: #6b46c1; border-left: 4px solid #6b46c1; }
+        .work-title { background: #ebf8ff; color: #2b6cb0; border-left: 4px solid #2b6cb0; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 20px; table-layout: fixed; }
+        th { background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; color: #475569; }
+        td { border: 1px solid #e2e8f0; padding: 8px; text-align: center; vertical-align: middle; }
+        .btn-group { display: flex; gap: 6px; justify-content: center; }
+        .copy-wrapper { position: relative; }
+        .copy-btn { padding: 5px 12px; cursor: pointer; border: 1px solid #cbd5e0; background: #fff; border-radius: 4px; font-size: 11px; font-weight: bold; transition: all 0.2s; white-space: nowrap; }
+        .copy-btn:hover { background: #edf2f7; border-color: #a0aec0; }
+        .copy-btn.success { background: #48bb78 !important; color: white !important; border-color: #38a169 !important; }
+        .status-ignore { color: #cbd5e0; font-style: italic; text-decoration: line-through; }
+        .tooltip {
+            visibility: hidden; position: absolute; z-index: 100; background-color: #333; color: #fff;
+            padding: 12px; border-radius: 6px; width: 280px; font-size: 11px; line-height: 1.5;
+            bottom: 130%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s;
+            white-space: pre-wrap; text-align: left; box-shadow: 0 4px 10px rgba(0,0,0,0.3); pointer-events: none;
+        }
+        .copy-wrapper:hover .tooltip { visibility: visible; opacity: 1; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>지출 내역 분류 시스템 v0.7</h2>
+    <div class="guide-box">
+        <b>[카드관리 > 카드사용내역 > 엑셀다운]</b> 파일을 첨부하세요.<br>
+        타다(택시), KTX/SR(철도), 승인-취소 상쇄 내역 등이 자동으로 정리됩니다.
+    </div>
+    <div id="drop-zone">엑셀 파일을 여기에 드래그하거나 클릭하세요</div>
+    <input type="file" id="file-input" style="display:none;" accept=".xlsx, .xls">
+
+    <div class="result-section" id="result-area">
+        <div class="tabs-wrapper"><div id="tabs-container"></div></div>
+        <div id="contents-container"></div>
+    </div>
+</div>
+
+<script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const tabsContainer = document.getElementById('tabs-container');
+    const contentsContainer = document.getElementById('contents-container');
+    let cardDataMap = {};
+
+    dropZone.onclick = () => fileInput.click();
+    fileInput.onchange = (e) => handleFile(e.target.files[0]);
+    dropZone.ondragover = (e) => e.preventDefault();
+    dropZone.ondrop = (e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); };
+
+    function handleFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(sheet, { range: 1, defval: "", raw: false, dateNF: 'yyyy-mm-dd' });
+            processData(json);
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function processData(data) {
+        cardDataMap = {};
+        const keys = Object.keys(data[0] || {});
+        const k = {
+            card: keys.find(k => k.includes('카드번호')),
+            date: keys.find(k => k.includes('일자')),
+            day: keys.find(k => k.includes('요일')),
+            time: keys.find(k => k.includes('시각')),
+            merch: keys.find(k => k.includes('가맹점')),
+            cat: keys.find(k => k.includes('업종')),
+            amt: keys.find(k => k.includes('금액') || k.includes('이용액')),
+            stat: keys.find(k => k.includes('진행') || k.includes('상태'))
+        };
+
+        data.forEach(row => {
+            const cardNum = String(row[k.card] || "정보없음").trim();
+            const merchant = String(row[k.merch] || "").trim();
+            if (!merchant || merchant === "가맹점명") return;
+            
+            let rawDate = String(row[k.date]);
+            let dateStr = rawDate.match(/\d{4}-\d{2}-\d{2}/) ? rawDate.match(/\d{4}-\d{2}-\d{2}/)[0] : rawDate;
+            let status = String(row[k.stat] || "").trim();
+            let amount = Number(String(row[k.amt] || "0").replace(/[^0-9.-]+/g, ""));
+
+            if (!cardDataMap[cardNum]) cardDataMap[cardNum] = [];
+            cardDataMap[cardNum].push({
+                date: dateStr, day: row[k.day], time: row[k.time],
+                merchant: merchant, category: String(row[k.cat] || ""), 
+                amount: Math.abs(amount), 
+                status: status,
+                isIgnored: status.includes('가승인')
+            });
+        });
+
+        // 상쇄 내역 탐지
+        Object.keys(cardDataMap).forEach(cardNum => {
+            let list = cardDataMap[cardNum];
+            for (let i = 0; i < list.length; i++) {
+                if (list[i].isIgnored) continue;
+                for (let j = i + 1; j < list.length; j++) {
+                    if (list[j].isIgnored) continue;
+                    const sameM = list[i].merchant === list[j].merchant;
+                    const sameA = list[i].amount === list[j].amount;
+                    const oppS = (list[i].status.includes('승인') && list[j].status.includes('취소')) || 
+                                 (list[i].status.includes('취소') && list[j].status.includes('승인'));
+                    if (sameM && sameA && oppS) {
+                        list[i].isIgnored = list[j].isIgnored = true;
+                        list[i].status = list[j].status = "상쇄(집행불필요)";
+                        break;
+                    }
+                }
+                if (list[i].status.includes('가승인')) list[i].status = "승인대기(집행불필요)";
+            }
+        });
+
+        renderLayout();
+        document.getElementById('result-area').style.display = 'block';
+        dropZone.style.display = 'none';
+    }
+
+    function renderLayout() {
+        tabsContainer.innerHTML = ''; contentsContainer.innerHTML = '';
+        Object.keys(cardDataMap).forEach((num, idx) => {
+            const btn = document.createElement('button');
+            btn.className = `tab-button ${idx === 0 ? 'active' : ''}`;
+            btn.innerText = num;
+            btn.onclick = () => {
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(`content-${idx}`).classList.add('active');
+            };
+            tabsContainer.appendChild(btn);
+            
+            const div = document.createElement('div');
+            div.className = `tab-content ${idx === 0 ? 'active' : ''}`;
+            div.id = `content-${idx}`;
+            const res = classify(cardDataMap[num]);
+            
+            div.innerHTML = `
+                <div class="group-title taxi-title">🚖 택시비</div>${genTable(res.taxi, res.taxiMap, "택시비")}
+                <div class="group-title train-title">🚄 국내여비 (철도)</div>${genTable(res.train, null, "열차운임")}
+                <div class="group-title post-title">📦 배송비 (우체국)</div>${genTable(res.post, null, "배송비")}
+                <div class="group-title item-title">📑 물품구입비 (파피루스)</div>${genTable(res.item, null, "물품구입비")}
+                <div class="group-title work-title">☕ 업무협의</div>${genWorkTable(res.work, num)}
+            `;
+            contentsContainer.appendChild(div);
+        });
+    }
+
+    function classify(items) {
+        const res = { taxi: [], train: [], post: [], item: [], work: [], taxiMap: {} };
+        items.forEach(i => {
+            const m = i.merchant;
+            const c = i.category;
+            if (m.includes('택시') || m.includes('타다')) { 
+                res.taxi.push(i); 
+                if (!i.isIgnored) res.taxiMap[i.date] = (res.taxiMap[i.date] || 0) + 1; 
+            }
+            else if (m.includes('SR') || m.includes('KTX') || c.includes('철도')) res.train.push(i);
+            else if (c.includes('우체국')) res.post.push(i);
+            else if (m.includes('파피루스')) res.item.push(i);
+            else res.work.push(i);
+        });
+        return res;
+    }
+
+    function genTable(items, taxiMap, defaultNote) {
+        if (!items.length) return "<p style='font-size:11px; color:#999; padding-left:10px;'>내역 없음</p>";
+        let h = `<table><thead><tr><th>연번</th><th>일자/시각</th><th>가맹점</th><th>금액</th><th>상태</th><th>적요</th></tr></thead><tbody>`;
+        items.forEach((item, idx) => {
+            let note = defaultNote;
+            if (taxiMap && taxiMap[item.date] > 1) note = "택시비(왕복)";
+            else if (taxiMap) note = "택시비(편도)";
+            if (item.isIgnored) note = "-";
+            const rowClass = item.isIgnored ? 'class="status-ignore"' : '';
+            h += `<tr ${rowClass}><td>${idx+1}</td><td>${item.date} ${item.time}</td><td>${item.merchant}</td><td>${item.amount.toLocaleString()}</td><td>${item.status}</td><td>${note}</td></tr>`;
+        });
+        return h + `</tbody></table>`;
+    }
+
+    function genWorkTable(items, cardNum) {
+        if (!items.length) return "<p style='font-size:11px; color:#999; padding-left:10px;'>내역 없음</p>";
+        let h = `<table><colgroup><col width="40"><col width="120"><col width="150"><col width="80"><col width="80"><col width="180"></colgroup><thead><tr><th>연번</th><th>일자/시각</th><th>가맹점</th><th>금액</th><th>상태</th><th>복사/미리보기</th></tr></thead><tbody>`;
+        items.forEach((item, idx) => {
+            const rowClass = item.isIgnored ? 'class="status-ignore"' : '';
+            if (item.isIgnored) {
+                h += `<tr ${rowClass}><td>${idx+1}</td><td>${item.date} ${item.time}</td><td>${item.merchant}</td><td>${item.amount.toLocaleString()}</td><td>${item.status}</td><td>-</td></tr>`;
+            } else {
+                const planText = getDraftText(cardNum, idx, 'plan');
+                const resultText = getDraftText(cardNum, idx, 'result');
+                h += `<tr><td>${idx+1}</td><td>${item.date} ${item.time}</td><td>${item.merchant}</td><td>${item.amount.toLocaleString()}</td><td>${item.status}</td>
+                    <td><div class="btn-group">
+                        <div class="copy-wrapper">
+                            <button class="copy-btn" onclick="copyDirect('${planText.replace(/\n/g, '\\n')}', this)">계획품의</button>
+                            <div class="tooltip"><b>[계획품의 미리보기]</b>\n\n${planText}</div>
+                        </div>
+                        <div class="copy-wrapper">
+                            <button class="copy-btn" onclick="copyDirect('${resultText.replace(/\n/g, '\\n')}', this)">결과보고</button>
+                            <div class="tooltip" style="left: -120px;"><b>[결과보고 미리보기]</b>\n\n${resultText}</div>
+                        </div>
+                    </div></td></tr>`;
+            }
+        });
+        return h + `</tbody></table>`;
+    }
+
+    function getDraftText(cardNum, idx, type) {
+        const item = classify(cardDataMap[cardNum]).work[idx];
+        const amount = item.amount;
+        function getHeadCount(amt) {
+            let base = 2;
+            if (amt > 100000) base = Math.ceil(amt / 25000);
+            else if (amt > 30000) base = 4;
+            else if (amt > 10000) base = 3;
+            for (let offset of [0, 1, -1, 2, -2]) {
+                let check = base + offset;
+                if (check >= 2 && amt % check === 0) return check;
+            }
+            return base;
+        }
+        let headCount = getHeadCount(amount);
+        const unitPrice = Math.floor(amount / headCount);
+        const diff = amount - (unitPrice * headCount);
+        let calc = diff === 0 ? `${unitPrice.toLocaleString()}원 * ${headCount}명` : `${unitPrice.toLocaleString()}원 * ${headCount-1}명 + ${(unitPrice + diff).toLocaleString()}원 * 1명`;
+
+        if (type === 'plan') {
+            return `재단 관련 업무협의를 아래와 같이 실시하고자 합니다.\n\n1. 협의일시: ${item.date.replace(/-/g,'.')}. (${item.day}) ${item.time}\n2. 협의장소: 국회 인근 ${item.merchant}\n3. 협의내용: OOOO 업무 협의\n4. 참석인원: ${headCount}명(OOO 외 ${headCount-1}명)\n5. 소요예산: ${amount.toLocaleString()}원.\n\n※ 산출근거: ${calc}`;
+        } else {
+            return `일 시: ${item.date} ${item.time}\n장 소: ${item.merchant}\n참석인사: 문체위 행정실, 재단 등 ${headCount}명\n개최내용: OOOO 업무 협의\n집행금액: ${amount.toLocaleString()}원`;
+        }
+    }
+
+    function copyDirect(text, btn) {
+        const ta = document.createElement("textarea");
+        ta.value = text.replace(/\\n/g, '\n'); 
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+        const oldLabel = btn.innerText;
+        btn.innerText = "복사완료"; btn.classList.add('success');
+        setTimeout(() => { btn.innerText = oldLabel; btn.classList.remove('success'); }, 1000);
+    }
+</script>
+</body>
+</html>
