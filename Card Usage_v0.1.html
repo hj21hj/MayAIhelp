@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>지출 내역 분류 시스템 v0.1</title>
+    <title>지출 내역 분류 시스템 v0.7.1</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; color: #333; margin: 0; padding: 20px; }
@@ -43,10 +43,10 @@
 <body>
 
 <div class="container">
-    <h2>지출 내역 분류 시스템 v0.7</h2>
+    <h2>지출 내역 분류 시스템 v0.7.1</h2>
     <div class="guide-box">
         <b>[카드관리 > 카드사용내역 > 엑셀다운]</b> 파일을 첨부하세요.<br>
-        파일을 첨부하면 자동으로 정리됩니다.
+        파일을 첨부하면 자동으로 정리됩니다. (일자 옆 요일 표기 추가됨)
     </div>
     <div id="drop-zone">엑셀 파일을 여기에 드래그하거나 클릭하세요</div>
     <input type="file" id="file-input" style="display:none;" accept=".xlsx, .xls">
@@ -84,6 +84,7 @@
 
     function processData(data) {
         cardDataMap = {};
+        if (data.length === 0) return;
         const keys = Object.keys(data[0] || {});
         const k = {
             card: keys.find(k => k.includes('카드번호')),
@@ -108,7 +109,7 @@
 
             if (!cardDataMap[cardNum]) cardDataMap[cardNum] = [];
             cardDataMap[cardNum].push({
-                date: dateStr, day: row[k.day], time: row[k.time],
+                date: dateStr, day: String(row[k.day] || "").charAt(0), time: row[k.time],
                 merchant: merchant, category: String(row[k.cat] || ""), 
                 amount: Math.abs(amount), 
                 status: status,
@@ -191,29 +192,32 @@
 
     function genTable(items, taxiMap, defaultNote) {
         if (!items.length) return "<p style='font-size:11px; color:#999; padding-left:10px;'>내역 없음</p>";
-        let h = `<table><thead><tr><th>연번</th><th>일자/시각</th><th>가맹점</th><th>금액</th><th>상태</th><th>적요</th></tr></thead><tbody>`;
+        let h = `<table><colgroup><col width="40"><col width="140"><col width="150"><col width="80"><col width="80"><col width="100"></colgroup><thead><tr><th>연번</th><th>일자/시각</th><th>가맹점</th><th>금액</th><th>상태</th><th>적요</th></tr></thead><tbody>`;
         items.forEach((item, idx) => {
             let note = defaultNote;
             if (taxiMap && taxiMap[item.date] > 1) note = "택시비(왕복)";
             else if (taxiMap) note = "택시비(편도)";
             if (item.isIgnored) note = "-";
             const rowClass = item.isIgnored ? 'class="status-ignore"' : '';
-            h += `<tr ${rowClass}><td>${idx+1}</td><td>${item.date} ${item.time}</td><td>${item.merchant}</td><td>${item.amount.toLocaleString()}</td><td>${item.status}</td><td>${note}</td></tr>`;
+            // 날짜 옆에 (요일) 추가
+            h += `<tr ${rowClass}><td>${idx+1}</td><td>${item.date}(${item.day}) ${item.time}</td><td>${item.merchant}</td><td>${item.amount.toLocaleString()}</td><td>${item.status}</td><td>${note}</td></tr>`;
         });
         return h + `</tbody></table>`;
     }
 
     function genWorkTable(items, cardNum) {
         if (!items.length) return "<p style='font-size:11px; color:#999; padding-left:10px;'>내역 없음</p>";
-        let h = `<table><colgroup><col width="40"><col width="120"><col width="150"><col width="80"><col width="80"><col width="180"></colgroup><thead><tr><th>연번</th><th>일자/시각</th><th>가맹점</th><th>금액</th><th>상태</th><th>복사/미리보기</th></tr></thead><tbody>`;
+        let h = `<table><colgroup><col width="40"><col width="140"><col width="150"><col width="80"><col width="80"><col width="180"></colgroup><thead><tr><th>연번</th><th>일자/시각</th><th>가맹점</th><th>금액</th><th>상태</th><th>복사/미리보기</th></tr></thead><tbody>`;
         items.forEach((item, idx) => {
             const rowClass = item.isIgnored ? 'class="status-ignore"' : '';
             if (item.isIgnored) {
-                h += `<tr ${rowClass}><td>${idx+1}</td><td>${item.date} ${item.time}</td><td>${item.merchant}</td><td>${item.amount.toLocaleString()}</td><td>${item.status}</td><td>-</td></tr>`;
+                // 날짜 옆에 (요일) 추가
+                h += `<tr ${rowClass}><td>${idx+1}</td><td>${item.date}(${item.day}) ${item.time}</td><td>${item.merchant}</td><td>${item.amount.toLocaleString()}</td><td>${item.status}</td><td>-</td></tr>`;
             } else {
                 const planText = getDraftText(cardNum, idx, 'plan');
                 const resultText = getDraftText(cardNum, idx, 'result');
-                h += `<tr><td>${idx+1}</td><td>${item.date} ${item.time}</td><td>${item.merchant}</td><td>${item.amount.toLocaleString()}</td><td>${item.status}</td>
+                // 날짜 옆에 (요일) 추가
+                h += `<tr><td>${idx+1}</td><td>${item.date}(${item.day}) ${item.time}</td><td>${item.merchant}</td><td>${item.amount.toLocaleString()}</td><td>${item.status}</td>
                     <td><div class="btn-group">
                         <div class="copy-wrapper">
                             <button class="copy-btn" onclick="copyDirect('${planText.replace(/\n/g, '\\n')}', this)">계획품의</button>
@@ -251,7 +255,7 @@
         if (type === 'plan') {
             return `재단 관련 업무협의를 아래와 같이 실시하고자 합니다.\n\n1. 협의일시: ${item.date.replace(/-/g,'.')}. (${item.day}) ${item.time}\n2. 협의장소: 국회 인근 ${item.merchant}\n3. 협의내용: OOOO 업무 협의\n4. 참석인원: ${headCount}명(OOO 외 ${headCount-1}명)\n5. 소요예산: ${amount.toLocaleString()}원.\n\n※ 산출근거: ${calc}`;
         } else {
-            return `일 시: ${item.date} ${item.time}\n장 소: ${item.merchant}\n참석인사: 문체위 행정실, 재단 등 ${headCount}명\n개최내용: OOOO 업무 협의\n집행금액: ${amount.toLocaleString()}원`;
+            return `일 시: ${item.date}(${item.day}) ${item.time}\n장 소: ${item.merchant}\n참석인사: 문체위 행정실, 재단 등 ${headCount}명\n개최내용: OOOO 업무 협의\n집행금액: ${amount.toLocaleString()}원`;
         }
     }
 
@@ -266,6 +270,4 @@
     }
 </script>
 </body>
-
 </html>
-
