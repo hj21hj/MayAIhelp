@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KPF 통합 모니터링 (Ver 0.84 통합)</title>
+    <title>KPF 통합 모니터링 (Ver 0.85 통합 수정본)</title>
     <style>
         :root { --primary: #004085; --naver: #03cf5d; --yt: #ff0000; --bg: #f4f7fa; --tab-bg: #ffffff; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -139,10 +139,11 @@
 </div>
 
 <script>
-    // 사용자 설정 주소
+    // 사용자 설정 주소 및 키
     const GAS_URL = "https://script.google.com/macros/s/AKfycbx674hDBg15__FCk1XB2HqOuxWMNB6Y2qn7b7WATT3QMCBNb4vPQzml7uZY8MJtbalU3A/exec";
     const GOOGLE_API_KEY = 'AIzaSyBFNFVqguQgjyy6jQWYgtTaiUn67A2DVMY';
     const ASSEMBLY_KEY = 'f5f19d8da12d4a9bbf83a305a9bd680d';
+    const PROXY = "https://corsproxy.io/?"; // 구글 전용 프록시
 
     const foundationPrefix = "(한국언론진흥재단 | 언론진흥재단)";
     const pressQuery = `${foundationPrefix} ("사지원" | "4g1@dong" | "김정한" | "acenes@n" | "전성민" | "ball@ajun" | "김태언" | "beborn@d" | "전병남" | "bn@sbs.cc" | "이복진" | "bok@segy" | "정지용" | "cdragon25" | "채영권" | "chae091@" | "김현아" | "chaos@ed" | "서형석" | "codealpha" | "홍지현" | "cookingwr" | "최성진" | "csj@hani.c" | "문화부" | "culture@f" | "유정무" | "dbwjdan12" | "신동흔" | "dhshin@cl" | "박성동" | "dong@jou" | "어환희" | "eo.hwanhe" | "엄재희" | "eomjh24@" | "조기용" | "excuseme@" | "서민음" | "faith@asia" | "김용석" | "fineview@" | "하남현" | "ha.namhyu" | "김희경" | "hkkim@ha" | "이호재" | "hoho@do" | "김유태" | "ink@mk.co" | "신진아" | "jashin@fn" | "정진수" | "jen@segye" | "전혜원" | "jhw@asiat" | "김지예" | "jiye@seou" | "조종엽" | "jjj@donga" | "정주원" | "jnwn@mk" | "조성민" | "josungmin" | "고성욱" | "kswk95@g" | "이종길" | "leemean@e" | "이태훈" | "libra@cho" | "정혜진" | "madein@s" | "윤수현" | "melanchol" | "고미혜" | "mihye@yn" | "윤민식" | "minsikyoo" | "유승목" | "mok@mt.c" | "홍석우" | "musehong" | "박수련" | "park.suryo" | "박대의" | "pashapark" | "박대형" | "pdh9511@" | "김기윤" | "pep@don" | "정철운" | "pierce@m" | "최용식" | "press01190" | "남보라" | "rarara@ha" | "신새롬" | "romi@yna" | "유선준" | "rsunjun@f" | "김슬기" | "sblake@m" | "손의연" | "seyyes@ec" | "장병호" | "solanin@e" | "김세관" | "sone@mt." | "신상호" | "ssheyes@h" | "송석주" | "ssp@etoda" | "김석" | "stone21@l" | "강푸른" | "strongblue" | "김상운" | "sukim@do" | "최승영" | "sychoi@jo" | "전종휘" | "symbio@h" | "박강수" | "turner@ha" | "최인철" | "unodos123" | "이한빛" | "vicky@her" | "장예림" | "yeaah@as" | "노진호" | "yesno@jtb" | "김영재" | "youngjae.k")`;
@@ -165,7 +166,16 @@
     const mediaMap = {'001': '연합뉴스', '005': '국민일보', '020': '동아일보', '021': '문화일보', '023': '조선일보', '025': '중앙일보', '028': '한겨레', '032': '경향신문', '081': '서울신문', '214': 'MBC', '055': 'SBS', '052': 'YTN', '056': 'KBS', '003': '내일신문', '011': '서울경제', '014': '파이낸셜뉴스', '015': '한국경제', '018': '이데일리', '009': '매일경제', '031': '아이뉴스24', '047': '오마이뉴스', '006': '미디어오늘', '119': '데일리안'};
     let nPage = 1, gPage = 1, nSort = 'date', gSort = 'date', ySort = 'date', gCachedItems = [], isReleaseMode = false;
 
-    // [12번 기능] 문체부 RSS 호출 (GAS 프록시 사용)
+    // 날짜 쿼리 생성 함수
+    function getDateQuery() {
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+        let dateQ = "";
+        if (start) dateQ += ` after:${start}`;
+        if (end) dateQ += ` before:${end}`;
+        return dateQ;
+    }
+
     async function fetchMCST() {
         const rssUrl = "https://www.mcst.go.kr/common/rss/rssGenXml.jsp?pMenuCD=0302000000";
         try {
@@ -181,7 +191,6 @@
         } catch(e) { document.getElementById('naverList').innerHTML = '문체부 자료 로드 실패'; }
     }
 
-    // [12번 기능] 국회 API 호출 (GAS 프록시 사용)
     async function fetchAssembly() {
         const apiUrl = `https://open.assembly.go.kr/portal/openapi/ninnagrlaelvtzfnt?KEY=${ASSEMBLY_KEY}&Type=json&pIndex=1&pSize=30`;
         try {
@@ -216,30 +225,54 @@
         } catch(e) { document.getElementById('naverList').innerHTML = '네이버 연결 오류'; }
     }
 
+    // 구글 뉴스 fetch 함수 (수정본)
     async function fetchGoogle() {
         if(isReleaseMode) return fetchAssembly();
+        
         if (gPage === 1 || gCachedItems.length === 0) {
-            const q = document.getElementById('queryInput').value;
-            const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=ko&gl=KR&ceid=KR:ko`;
+            const q = document.getElementById('queryInput').value + getDateQuery();
+            const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=ko&gl=KR&ceid=KR:ko`;
+            
             try {
-                const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`);
+                // 0.753 방식의 corsproxy 사용
+                const res = await fetch(PROXY + encodeURIComponent(url));
                 const text = await res.text();
                 const xml = new DOMParser().parseFromString(text, "text/xml");
                 gCachedItems = Array.from(xml.querySelectorAll("item"));
-            } catch(e) { gCachedItems = []; }
+                
+                // 최신순 정렬 로직
+                if (gSort === 'date') {
+                    gCachedItems.sort((a, b) => new Date(b.querySelector("pubDate").textContent) - new Date(a.querySelector("pubDate").textContent));
+                }
+            } catch(e) { 
+                console.error("구글 로드 실패:", e);
+                gCachedItems = []; 
+            }
         }
-        const paged = gCachedItems.slice((gPage-1)*15, gPage*15);
-        document.getElementById('googleList').innerHTML = paged.map(n => `<a href="${n.querySelector("link").textContent}" target="_blank" class="item"><div class="item-title">${n.querySelector("title").textContent}</div><div class="item-info"><span style="color:var(--primary); font-weight:bold;">${n.querySelector("source")?.textContent || ''}</span><span>${new Date(n.querySelector("pubDate").textContent).toLocaleDateString()}</span></div></a>`).join('') || '결과 없음';
+        
+        const startIdx = (gPage - 1) * 15;
+        const paged = gCachedItems.slice(startIdx, startIdx + 15);
+        
+        document.getElementById('googleList').innerHTML = paged.map(n => `
+            <a href="${n.querySelector("link").textContent}" target="_blank" class="item">
+                <div class="item-title">${n.querySelector("title").textContent}</div>
+                <div class="item-info">
+                    <span style="color:var(--primary); font-weight:bold;">${n.querySelector("source")?.textContent || ''}</span>
+                    <span>${new Date(n.querySelector("pubDate").textContent).toLocaleDateString()}</span>
+                </div>
+            </a>`).join('') || '결과 없음';
+            
         document.getElementById('gPageNum').innerText = gPage;
     }
 
     async function fetchYoutube() {
-        const q = isReleaseMode ? "문체부 국회 보도자료" : document.getElementById('queryInput').value;
-        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&maxResults=15&order=${ySort}&type=video&key=${GOOGLE_API_KEY}`;
+        const q = document.getElementById('queryInput').value + getDateQuery();
+        const order = (ySort === 'date') ? 'date' : 'relevance';
+        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&maxResults=15&order=${order}&type=video&key=${GOOGLE_API_KEY}`;
         try {
             const res = await fetch(url);
             const data = await res.json();
-            document.getElementById('ytList').innerHTML = (data.items || []).map(v => `<a href="https://www.youtube.com/watch?v=${v.id.videoId}" target="_blank" class="item"><div class="yt-thumb" style="background-image:url('${v.snippet.thumbnails.medium.url}')"></div><div class="item-title" style="font-size:0.9rem;">${v.snippet.title}</div><div class="item-info"><span>${v.snippet.channelTitle}</span></div></a>`).join('') || '결과 없음';
+            document.getElementById('ytList').innerHTML = (data.items || []).map(v => `<a href="https://www.youtube.com/watch?v=${v.id.videoId}" target="_blank" class="item"><div class="yt-thumb" style="background-image:url('${v.snippet.thumbnails.medium.url}')"></div><div class="item-title" style="font-size:0.9rem;">${v.snippet.title}</div><div class="item-info"><span>${v.snippet.channelTitle}</span><span>${new Date(v.snippet.publishedAt).toLocaleDateString()}</span></div></a>`).join('') || '결과 없음';
         } catch(e) { document.getElementById('ytList').innerHTML = '유튜브 로드 실패'; }
     }
 
@@ -247,7 +280,6 @@
         isReleaseMode = (idx === 11);
         document.querySelectorAll('.filter-btn').forEach((btn, i) => btn.classList.toggle('active', i === idx));
         
-        // UI 텍스트 및 모드 전환
         if(isReleaseMode) {
             document.getElementById('nHeader').innerText = "🏛️ 문체부 보도자료";
             document.getElementById('gHeader').innerText = "🏛️ 국회 보도자료";
@@ -268,27 +300,48 @@
         nPage = 1; gPage = 1; fetchAll();
     }
 
-    function fetchAll() { fetchNaver(); fetchGoogle(); fetchYoutube(); }
+    function fetchAll() { 
+        document.querySelectorAll('.local-search').forEach(input => input.value = '');
+        fetchNaver(); fetchGoogle(); fetchYoutube(); 
+    }
+    
     function fetchAllAndGo() { fetchAll(); if(window.innerWidth <= 1024) switchTab('naver-col', 1); }
+    
     function switchTab(id, idx) {
         document.querySelectorAll('.column').forEach(c => c.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.querySelectorAll('.nav-item').forEach((n, i) => n.classList.toggle('active', i === idx));
     }
+    
     function reSearchList(id, k) {
         const items = document.getElementById(id).querySelectorAll('.item');
         items.forEach(i => i.style.display = i.innerText.toLowerCase().includes(k.toLowerCase()) ? 'block' : 'none');
     }
+    
     function setNaverSort(s) { nSort = s; nPage = 1; fetchNaver(); }
     function setGoogleSort(s) { gSort = s; gPage = 1; gCachedItems = []; fetchGoogle(); }
     function setYoutubeSort(s) { ySort = s; fetchYoutube(); }
     function changeNPage(s) { nPage = Math.max(1, nPage+s); fetchNaver(); }
-    function changeGPage(s) { gPage = Math.max(1, gPage+s); fetchGoogle(); }
+    function changeGPage(s) { gPage = Math.max(1, Math.min(Math.ceil(gCachedItems.length/15), gPage + s)); fetchGoogle(); }
 
     window.onload = function() {
         const now = new Date();
-        document.getElementById('startDate').value = new Date(now.setDate(now.getDate()-1)).toISOString().split('T')[0];
-        document.getElementById('endDate').value = new Date().toISOString().split('T')[0];
+        const todayStr = now.toISOString().split('T')[0];
+        const dayOfWeek = now.getDay(); 
+        
+        let startDate;
+        if (dayOfWeek === 1) { // 월요일인 경우 금요일부터
+            const friday = new Date(now);
+            friday.setDate(now.getDate() - 3);
+            startDate = friday.toISOString().split('T')[0];
+        } else { 
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            startDate = yesterday.toISOString().split('T')[0];
+        }
+
+        document.getElementById('startDate').value = startDate;
+        document.getElementById('endDate').value = todayStr;
         applyFilter(0);
     };
 </script>
