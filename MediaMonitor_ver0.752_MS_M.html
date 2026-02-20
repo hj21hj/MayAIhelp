@@ -144,7 +144,7 @@
     const foundationPrefix = "(한국언론진흥재단 | 언론진흥재단)";
     const pressQuery = `${foundationPrefix} ("사지원" | "4g1@dong" | "김정한" | "acenes@n" | "전성민" | "ball@ajun" | "김태언" | "beborn@d" | "전병남" | "bn@sbs.cc" | "이복진" | "bok@segy" | "정지용" | "cdragon25" | "채영권" | "chae091@" | "김현아" | "chaos@ed" | "서형석" | "codealpha" | "홍지현" | "cookingwr" | "최성진" | "csj@hani.c" | "문화부" | "culture@f" | "유정무" | "dbwjdan12" | "신동흔" | "dhshin@cl" | "박성동" | "dong@jou" | "어환희" | "eo.hwanhe" | "엄재희" | "eomjh24@" | "조기용" | "excuseme@" | "서민음" | "faith@asia" | "김용석" | "fineview@" | "하남현" | "ha.namhyu" | "김희경" | "hkkim@ha" | "이호재" | "hoho@do" | "김유태" | "ink@mk.co" | "신진아" | "jashin@fn" | "정진수" | "jen@segye" | "전혜원" | "jhw@asiat" | "김지예" | "jiye@seou" | "조종엽" | "jjj@donga" | "정주원" | "jnwn@mk" | "조성민" | "josungmin" | "고성욱" | "kswk95@g" | "이종길" | "leemean@e" | "이태훈" | "libra@cho" | "정혜진" | "madein@s" | "윤수현" | "melanchol" | "고미혜" | "mihye@yn" | "윤민식" | "minsikyoo" | "유승목" | "mok@mt.c" | "홍석우" | "musehong" | "박수련" | "park.suryo" | "박대의" | "pashapark" | "박대형" | "pdh9511@" | "김기윤" | "pep@don" | "정철운" | "pierce@m" | "최용식" | "press01190" | "남보라" | "rarara@ha" | "신새롬" | "romi@yna" | "유선준" | "rsunjun@f" | "김슬기" | "sblake@m" | "손의연" | "seyyes@ec" | "장병호" | "solanin@e" | "김세관" | "sone@mt." | "신상호" | "ssheyes@h" | "송석주" | "ssp@etoda" | "김석" | "stone21@l" | "강푸른" | "strongblue" | "김상운" | "sukim@do" | "최승영" | "sychoi@jo" | "전종휘" | "symbio@h" | "박강수" | "turner@ha" | "최인철" | "unodos123" | "이한빛" | "vicky@her" | "장예림" | "yeaah@as" | "노진호" | "yesno@jtb" | "김영재" | "youngjae.k")`;
 
-    const filterKeywords = ["한국언론진흥재단 | 언론진흥재단 | 언론재단", "(한국언론진흥재단 | 언론진흥재단 | 언론재단) 신문법", " 정부광고 | "정부 광고"", "(한국언론진흥재단 | 언론진흥재단 | 언론재단) 미디어거버넌스", "(한국언론진흥재단 | 언론진흥재단 | 언론재단) 미디어리터러시", "미디어바우처 | 미디어특위 | 언론진흥기금 | 지역신문발전기금 | 언론노조 | 언론정책 | 언론개혁", "문체위 | 세종프레스센터 | 뉴스제휴평가위원회 | 제평위 | 신문윤리위원회 | 김효재", "오세욱 | 박영흠 | 진민정", "공공기관", "신문 | 인터넷신문 | 방송 | 통신 | 국회 | 문화체육관광부 | 과학기술방송통신부", pressQuery, "PRE_RELEASE_MODE"];
+    const filterKeywords = ["한국언론진흥재단 | 언론진흥재단 | 언론재단", "(한국언론진흥재단 | 언론진흥재단 | 언론재단) 신문법", "정부광고 | "정부 광고"", "(한국언론진흥재단 | 언론진흥재단 | 언론재단) 미디어거버넌스", "(한국언론진흥재단 | 언론진흥재단 | 언론재단) 미디어리터러시", "미디어바우처 | 미디어특위 | 언론진흥기금 | 지역신문발전기금 | 언론노조 | 언론정책 | 언론개혁", "문체위 | 세종프레스센터 | 뉴스제휴평가위원회 | 제평위 | 신문윤리위원회 | 김효재", "오세욱 | 박영흠 | 진민정", "공공기관", "신문 | 인터넷신문 | 방송 | 통신 | 국회 | 문화체육관광부 | 과학기술방송통신부", pressQuery, "PRE_RELEASE_MODE"];
 
     const mediaMap = {'001': '연합뉴스', '005': '국민일보', '020': '동아일보', '021': '문화일보', '023': '조선일보', '025': '중앙일보', '028': '한겨레', '032': '경향신문', '081': '서울신문', '214': 'MBC', '055': 'SBS', '052': 'YTN', '056': 'KBS', '003': '내일신문', '011': '서울경제', '014': '파이낸셜뉴스', '015': '한국경제', '018': '이데일리', '009': '매일경제', '031': '아이뉴스24', '047': '오마이뉴스', '006': '미디어오늘', '119': '데일리안'};
     let nPage = 1, gPage = 1, nSort = 'date', gSort = 'date', ySort = 'date', gCachedItems = [], isReleaseMode = false;
@@ -288,5 +288,6 @@
     };
 </script>
 </body>
+
 </html>
 
